@@ -3,6 +3,21 @@ import bcrypt from 'bcrypt';
 import doctorModel from '../models/doctorModel.js';
 import jwt from 'jsonwebtoken';
 import { sendDoctorWelcomeEmail } from '../utils/emailConfig.js';
+import fs from 'fs';
+import path from 'path';
+
+// Valid degrees for validation
+const validDegrees = [
+    'MBBS',
+    'MD',
+    'DO',
+    'BDS',
+    'MS',
+    'DNB',
+    'FCPS',
+    'PhD',
+    'DM',
+];
 
 // API for adding doctor
 const addDoctor = async (req, res) => {
@@ -10,35 +25,32 @@ const addDoctor = async (req, res) => {
         const { name, email, password, speciality, degree, experience, about, fees, address } = req.body;
         const imageFile = req.file;
 
-        // Checking for all required data
         if (!name || !email || !password || !speciality || !degree || !experience || !about || !fees || !address || !imageFile) {
             return res.json({ success: false, message: 'Missing Details' });
         }
 
-        // Validating email format
         if (!validator.isEmail(email)) {
             return res.json({ success: false, message: 'Please enter a valid email' });
         }
 
-        // Validating strong password
         if (password.length < 8) {
             return res.json({ success: false, message: 'Please enter a strong password' });
         }
 
-        // Check if email already exists
+        if (!validDegrees.includes(degree)) {
+            return res.json({ success: false, message: 'Invalid degree selected' });
+        }
+
         const existingDoctor = await doctorModel.findOne({ email });
         if (existingDoctor) {
             return res.json({ success: false, message: 'Email already registered' });
         }
 
-        // Use the local file path from Multer
         const imagePath = req.file.path.replace(/\\/g, '/');
 
-        // Hashing doctor password
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Saving doctor data
         const doctorData = {
             name,
             email,
@@ -56,14 +68,12 @@ const addDoctor = async (req, res) => {
         const newDoctor = new doctorModel(doctorData);
         await newDoctor.save();
 
-        // Send welcome email to the doctor
         const emailSent = await sendDoctorWelcomeEmail(email, name, password);
         if (!emailSent) {
             return res.json({ success: false, message: 'Doctor added, but failed to send welcome email' });
         }
 
         res.json({ success: true, message: 'Doctor Added and Email Sent' });
-
     } catch (error) {
         console.error('Error in addDoctor:', error.message);
         res.json({ success: false, message: error.message });
@@ -87,4 +97,92 @@ const loginAdmin = async (req, res) => {
     }
 };
 
-export { addDoctor, loginAdmin };
+// API to fetch all doctors
+const getDoctors = async (req, res) => {
+    try {
+        const doctors = await doctorModel.find({}).select('-password');
+        res.json({ success: true, doctors });
+    } catch (error) {
+        console.error('Error in getDoctors:', error.message);
+        res.json({ success: false, message: error.message });
+    }
+};
+
+// API to delete a doctor
+const deleteDoctor = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const doctor = await doctorModel.findById(id);
+        if (!doctor) {
+            return res.json({ success: false, message: 'Doctor not found' });
+        }
+
+        const imagePath = path.join(process.cwd(), doctor.image);
+        if (fs.existsSync(imagePath)) {
+            fs.unlinkSync(imagePath);
+        }
+
+        await doctorModel.findByIdAndDelete(id);
+        res.json({ success: true, message: 'Doctor deleted successfully' });
+    } catch (error) {
+        console.error('Error in deleteDoctor:', error.message);
+        res.json({ success: false, message: error.message });
+    }
+};
+
+// API to update a doctor
+const updateDoctor = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, email, speciality, degree, experience, about, fees, address } = req.body;
+        const imageFile = req.file;
+
+        const doctor = await doctorModel.findById(id);
+        if (!doctor) {
+            return res.json({ success: false, message: 'Doctor not found' });
+        }
+
+        if (!name || !email || !speciality || !degree || !experience || !about || !fees || !address) {
+            return res.json({ success: false, message: 'Missing Details' });
+        }
+
+        if (!validator.isEmail(email)) {
+            return res.json({ success: false, message: 'Please enter a valid email' });
+        }
+
+        if (!validDegrees.includes(degree)) {
+            return res.json({ success: false, message: 'Invalid degree selected' });
+        }
+
+        const existingDoctor = await doctorModel.findOne({ email, _id: { $ne: id } });
+        if (existingDoctor) {
+            return res.json({ success: false, message: 'Email already registered' });
+        }
+
+        doctor.name = name;
+        doctor.email = email;
+        doctor.speciality = speciality;
+        doctor.degree = degree;
+        doctor.experience = experience;
+        doctor.about = about;
+        doctor.fees = Number(fees);
+        doctor.address = JSON.parse(address);
+
+        if (imageFile) {
+            const oldImagePath = path.join(process.cwd(), doctor.image);
+            if (fs.existsSync(oldImagePath)) {
+                fs.unlinkSync(oldImagePath);
+            }
+            doctor.image = req.file.path.replace(/\\/g, '/');
+        }
+
+        await doctor.save();
+        const updatedDoctor = await doctorModel.findById(id).select('-password');
+        res.json({ success: true, message: 'Doctor updated successfully', doctor: updatedDoctor });
+    } catch (error) {
+        console.error('Error in updateDoctor:', error.message);
+        res.json({ success: false, message: error.message });
+    }
+};
+
+export { addDoctor, loginAdmin, getDoctors, deleteDoctor, updateDoctor };
