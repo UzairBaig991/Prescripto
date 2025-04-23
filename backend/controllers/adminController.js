@@ -73,7 +73,7 @@ const addDoctor = async (req, res) => {
             return res.json({ success: false, message: 'Doctor added, but failed to send welcome email' });
         }
 
-        res.json({ success: true, message: 'Doctor Added and Email Sent' });
+        res.json({ success: true, message: 'Doctor Added' });
     } catch (error) {
         console.error('Error in addDoctor:', error.message);
         res.json({ success: false, message: error.message });
