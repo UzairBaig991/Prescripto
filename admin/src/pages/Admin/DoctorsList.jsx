@@ -89,7 +89,7 @@ const DoctorsList = () => {
       experience: doctor.experience,
       fees: doctor.fees.toString(),
       speciality: doctor.speciality,
-      degree: validDegrees.includes(doctor.degree) ? doctor.degree : 'MBBS', // Fallback to MBBS if degree is invalid
+      degree: validDegrees.includes(doctor.degree) ? doctor.degree : 'MBBS',
       about: doctor.about,
       address1: doctor.address.line1,
       address2: doctor.address.line2 || '',
