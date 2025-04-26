@@ -146,8 +146,27 @@ const DoctorsList = () => {
     }
   };
 
-  // Handle availability toggle
-  const handleAvailabilityToggle = async (doctorId, currentStatus) => {
+   // Handle availability toggle
+   const handleAvailabilityToggle = async (doctorId, currentStatus) => {
+    // Debugging logs
+    console.log('Toggling availability for doctorId:', doctorId, 'Current status:', currentStatus);
+    console.log('Doctors state before update:', doctors);
+
+    // Validate inputs
+    if (!doctorId || typeof currentStatus !== 'boolean') {
+      console.error('Invalid doctorId or currentStatus:', { doctorId, currentStatus });
+      toast.error('Failed to toggle availability: Invalid data');
+      return;
+    }
+
+    // Optimistically update the UI
+    const originalDoctors = [...doctors];
+    setDoctors((prev) =>
+      prev.map((doc) =>
+        doc._id === doctorId ? { ...doc, available: !currentStatus } : doc
+      )
+    );
+
     try {
       const { data } = await axios.patch(
         `${backendUrl}/api/admin/toggle-availability/${doctorId}`,
@@ -156,24 +175,25 @@ const DoctorsList = () => {
       );
 
       if (data.success) {
-        setDoctors((prev) =>
-          prev.map((doc) =>
-            doc._id === doctorId ? { ...doc, available: !currentStatus } : doc
-          )
-        );
         toast.success(data.message);
       } else {
+        // Revert the optimistic update on failure
+        setDoctors(originalDoctors);
         toast.error(data.message);
       }
     } catch (error) {
       console.error('Error toggling availability:', error);
+      // Revert the optimistic update on error
+      setDoctors(originalDoctors);
       toast.error(error.response?.data?.message || 'Failed to toggle availability');
     }
+
+    console.log('Doctors state after update:', doctors);
   };
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
-      <h2 className="text-xl font-semibold mb-6">All Doctors</h2>
+      <h2 className="text-lg font-medium mb-6">All Doctors</h2>
       {loading ? (
         <p className="text-gray-500 text-center">Loading...</p>
       ) : doctors.length === 0 ? (
@@ -183,41 +203,46 @@ const DoctorsList = () => {
           {doctors.map((doctor) => (
             <div
               key={doctor._id}
-              className="bg-blue-50 rounded-lg shadow-md p-4 flex flex-col items-center"
+              className="border border-indigo-200 rounded-xl max-w-56 overflow-hidden cursor-pointer group"
             >
-              <img
-                src={`${backendUrl}/${doctor.image}`}
-                alt={doctor.name}
-                className="w-32 h-32 object-cover mb-4"
-              />
-              <h3 className="text-lg font-semibold text-gray-800">{doctor.name}</h3>
-              <p className="text-gray-600 text-sm mb-4">{doctor.speciality}</p>
-              <div className="flex gap-2 mb-4">
-                <button
-                  onClick={() => openEditModal(doctor)}
-                  className="text-blue-600 hover:text-blue-800"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => {
-                    setSelectedDoctorId(doctor._id);
-                    setShowDeleteModal(true);
-                  }}
-                  className="text-red-600 hover:text-red-800"
-                >
-                  Delete
-                </button>
-              </div>
-              <label className="flex items-center gap-2 text-gray-600 text-sm">
-                <input
-                  type="checkbox"
-                  checked={doctor.available || false}
-                  onChange={() => handleAvailabilityToggle(doctor._id, doctor.available)}
-                  className="w-4 h-4"
+              <div className="relative w-full h-48">
+                <div className="absolute inset-0 bg-indigo-50 group-hover:bg-primary transition-all duration-500"></div>
+                <img
+                  src={`${backendUrl}/${doctor.image}`}
+                  alt={doctor.name}
+                  className="relative w-full h-48 object-cover"
                 />
-                Available for Booking
-              </label>
+              </div>
+              <div className="p-3 text-center">
+                <h3 className="text-base font-semibold text-neutral-800 mb-1">{doctor.name}</h3>
+                <p className="text-zinc-600 text-xs mb-3">{doctor.speciality}</p>
+                <div className="flex justify-center gap-2 mb-3">
+                  <button
+                    onClick={() => openEditModal(doctor)}
+                    className="text-blue-600 hover:text-blue-800 text-sm"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedDoctorId(doctor._id);
+                      setShowDeleteModal(true);
+                    }}
+                    className="text-red-600 hover:text-red-800 text-sm"
+                  >
+                    Delete
+                  </button>
+                </div>
+                <label className="flex justify-center items-center gap-2 text-gray-600 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={doctor.available || false}
+                    onChange={() => handleAvailabilityToggle(doctor._id, doctor.available)}
+                    className="w-4 h-4"
+                  />
+                  Available for Booking
+                </label>
+              </div>
             </div>
           ))}
         </div>
