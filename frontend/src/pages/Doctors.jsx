@@ -1,5 +1,5 @@
 import React, {  useContext, useEffect, useState } from 'react'
- import { assets } from '../assets/assets_frontend/assets'
+import { assets } from '../assets/assets_frontend/assets'
 import { useNavigate, useParams } from 'react-router-dom'
 import { AppContext } from '../Context/AppContext'
 
