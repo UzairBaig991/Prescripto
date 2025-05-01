@@ -62,6 +62,7 @@ const AppContextProvider = (props) => {
 
   const [doctors, setDoctors] = useState([]);
   const [token, setToken] = useState(localStorage.getItem('token') || null);
+  const [userData, setUserData] = useState(false);
 
   // Providing doctors data in context
   const getDoctorsData = async () => {
@@ -77,6 +78,7 @@ const AppContextProvider = (props) => {
       toast.error(error.message);
     }
   };
+  
 
   // Sync token with localStorage
   useEffect(() => {
