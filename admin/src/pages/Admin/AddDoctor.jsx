@@ -16,6 +16,7 @@ const AddDoctor = () => {
     const [degree, setDegree] = useState('MBBS');
     const [address1, setAddress1] = useState('');
     const [address2, setAddress2] = useState('');
+    const [loading, setLoading] = useState(false); // Added loading state
 
     const { backendUrl, aToken } = useContext(AdminContext);
 
@@ -36,7 +37,10 @@ const AddDoctor = () => {
         event.preventDefault();
 
         try {
+            setLoading(true); // Set loading to true when submission starts
+
             if (!docImg) {
+                setLoading(false); // Reset loading if validation fails
                 return toast.error('Image Not Selected');
             }
 
@@ -75,6 +79,8 @@ const AddDoctor = () => {
         } catch (error) {
             console.error('Error adding doctor:', error);
             toast.error(error.response?.data?.message || 'An error occurred');
+        } finally {
+            setLoading(false); // Reset loading state after submission
         }
     };
 
@@ -233,9 +239,25 @@ const AddDoctor = () => {
                         required
                     />
                 </div>
-                <button type="submit" className="bg-primary px-10 py-3 text-white rounded-full mt-4">
-                    Add Doctor
-                </button>
+                <button
+    type="submit"
+    className={`px-10 py-3 text-white rounded-full mt-4 transition-all duration-300 flex items-center justify-center ${
+        loading ? 'bg-gray-500 cursor-not-allowed' : 'bg-primary hover:bg-blue-700'
+    }`}
+    disabled={loading}
+>
+    {loading ? (
+        <>
+            <svg className="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8h-8z"></path>
+            </svg>
+            Adding Doctor...
+        </>
+    ) : (
+        'Add Doctor'
+    )}
+</button>
             </div>
         </form>
     );
